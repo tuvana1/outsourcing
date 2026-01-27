@@ -77,21 +77,6 @@
             margin-top: 2px;
         }
 
-        .live-dot {
-            display: inline-block;
-            width: 6px;
-            height: 6px;
-            background: #30d158;
-            border-radius: 50%;
-            margin-right: 6px;
-            animation: pulse 2s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
-        }
-
         .steps {
             display: flex;
             flex-direction: column;
@@ -262,7 +247,7 @@
             
             <div class="live-stats">
                 <div class="live-stat">
-                    <div class="live-stat-value"><span class="live-dot"></span><span id="sent-count">0</span></div>
+                    <div class="live-stat-value"><span id="sent-count">0</span></div>
                     <div class="live-stat-label">Emails sent</div>
                 </div>
                 <div class="live-stat">
