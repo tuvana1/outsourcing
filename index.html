@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Outreach Pipeline</title>
+    <title>Palm Drive — Outreach Pipeline</title>
     <style>
         * {
             margin: 0;
@@ -23,6 +23,73 @@
             max-width: 680px;
             margin: 0 auto;
             padding: 80px 24px;
+        }
+
+        /* Palm Drive Node Animation */
+        .brand {
+            margin-bottom: 48px;
+        }
+
+        .brand-text {
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            color: #1d1d1f;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .brand-letter {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            background: #f5f5f7;
+            border-radius: 6px;
+            font-size: 12px;
+            opacity: 0;
+            transform: scale(0.5);
+            animation: nodeIn 0.4s ease forwards;
+        }
+
+        .brand-letter:nth-child(1) { animation-delay: 0.1s; }
+        .brand-letter:nth-child(2) { animation-delay: 0.15s; }
+        .brand-letter:nth-child(3) { animation-delay: 0.2s; }
+        .brand-letter:nth-child(4) { animation-delay: 0.25s; }
+        .brand-letter:nth-child(5) { animation-delay: 0.35s; }
+        .brand-letter:nth-child(6) { animation-delay: 0.4s; }
+        .brand-letter:nth-child(7) { animation-delay: 0.45s; }
+        .brand-letter:nth-child(8) { animation-delay: 0.5s; }
+        .brand-letter:nth-child(9) { animation-delay: 0.55s; }
+
+        .brand-space {
+            width: 12px;
+        }
+
+        .brand-connector {
+            width: 8px;
+            height: 2px;
+            background: #e8e8ed;
+            opacity: 0;
+            animation: fadeIn 0.3s ease forwards;
+            animation-delay: 0.6s;
+        }
+
+        @keyframes nodeIn {
+            0% {
+                opacity: 0;
+                transform: scale(0.5);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
         }
 
         header {
@@ -240,10 +307,25 @@
 </head>
 <body>
     <div class="container">
+        <div class="brand">
+            <div class="brand-text">
+                <span class="brand-letter">P</span>
+                <span class="brand-letter">A</span>
+                <span class="brand-letter">L</span>
+                <span class="brand-letter">M</span>
+                <span class="brand-space"></span>
+                <span class="brand-letter">D</span>
+                <span class="brand-letter">R</span>
+                <span class="brand-letter">I</span>
+                <span class="brand-letter">V</span>
+                <span class="brand-letter">E</span>
+            </div>
+        </div>
+
         <header>
-            <p class="overline">Workflow Documentation</p>
-            <h1>Lead Generation Pipeline</h1>
-            <p class="lead">Automated extraction, verification, and outreach for startup founders from Harmonic to Lemlist.</p>
+            <p class="overline">Outreach Pipeline</p>
+            <h1>Lead Generation</h1>
+            <p class="lead">Automated extraction, verification, and outreach for startup founders.</p>
             
             <div class="live-stats">
                 <div class="live-stat">
@@ -286,7 +368,6 @@
                                 <li>Company names</li>
                                 <li>CEO/Founder names</li>
                                 <li>Email addresses</li>
-                                <li>Domains</li>
                             </ul>
                         </div>
                     </div>
@@ -306,22 +387,22 @@
                     <div class="step-toggle">+</div>
                 </div>
                 <div class="step-content">
-                    <p class="step-description">Manual verification using Harmonic Scout and LinkedIn to confirm CEO accuracy and email validity.</p>
+                    <p class="step-description">Manual verification using Harmonic Scout and LinkedIn to confirm accuracy.</p>
                     <div class="cards">
                         <div class="card">
                             <div class="card-title">Verification</div>
                             <ul>
-                                <li>CEO is current position</li>
-                                <li>Email belongs to person</li>
-                                <li>Work email, not personal</li>
+                                <li>CEO is current</li>
+                                <li>Email is valid</li>
+                                <li>Work email only</li>
                             </ul>
                         </div>
                         <div class="card">
                             <div class="card-title">Removed</div>
                             <ul>
                                 <li>No email found</li>
-                                <li>Generic inbox only</li>
-                                <li>Personal or off-domain</li>
+                                <li>Generic inbox</li>
+                                <li>Personal email</li>
                             </ul>
                         </div>
                     </div>
@@ -336,33 +417,30 @@
                 <div class="step-header" onclick="toggleStep(this)">
                     <div class="step-header-left">
                         <div class="step-num">3</div>
-                        <div class="step-title">Export to Google Sheets</div>
+                        <div class="step-title">Export to Sheets</div>
                     </div>
                     <div class="step-toggle">+</div>
                 </div>
                 <div class="step-content">
-                    <p class="step-description">Push verified data to a central spreadsheet for tracking, collaboration, and enrichment.</p>
+                    <p class="step-description">Push verified data to Google Sheets for tracking and collaboration.</p>
                     <div class="cards">
                         <div class="card">
-                            <div class="card-title">Lead Data</div>
+                            <div class="card-title">Data</div>
                             <ul>
-                                <li>companyName</li>
-                                <li>firstName, ceoName</li>
-                                <li>email, domain</li>
+                                <li>Company, Name</li>
+                                <li>Email, Domain</li>
                             </ul>
                         </div>
                         <div class="card">
                             <div class="card-title">Tracking</div>
                             <ul>
-                                <li>On 1a Sourcing List</li>
                                 <li>Affinity Status</li>
-                                <li>Contacted / Responded</li>
+                                <li>Contacted</li>
                             </ul>
                         </div>
                     </div>
                     <div class="tags">
-                        <span class="tag">Google Sheets API</span>
-                        <span class="tag">gspread</span>
+                        <span class="tag">Google Sheets</span>
                     </div>
                 </div>
             </div>
@@ -371,33 +449,30 @@
                 <div class="step-header" onclick="toggleStep(this)">
                     <div class="step-header-left">
                         <div class="step-num">4</div>
-                        <div class="step-title">Check Affinity CRM</div>
+                        <div class="step-title">Check Affinity</div>
                     </div>
                     <div class="step-toggle">+</div>
                 </div>
                 <div class="step-content">
-                    <p class="step-description">Cross-reference against the 1a Sourcing List to avoid duplicate outreach and track status.</p>
+                    <p class="step-description">Cross-reference against CRM to avoid duplicates.</p>
                     <div class="cards">
                         <div class="card">
                             <div class="card-title">Search</div>
                             <ul>
                                 <li>Match by domain</li>
-                                <li>Check list membership</li>
-                                <li>Get field values</li>
+                                <li>Check list</li>
                             </ul>
                         </div>
                         <div class="card">
                             <div class="card-title">Results</div>
                             <ul>
-                                <li>12 on sourcing list</li>
-                                <li>47 new prospects</li>
-                                <li>0 already contacted</li>
+                                <li>12 existing</li>
+                                <li>47 new</li>
                             </ul>
                         </div>
                     </div>
                     <div class="tags">
                         <span class="tag">Affinity API</span>
-                        <span class="tag">List ID 21233</span>
                     </div>
                 </div>
             </div>
@@ -411,12 +486,11 @@
                     <div class="step-toggle">+</div>
                 </div>
                 <div class="step-content">
-                    <p class="step-description">Add verified leads to the email campaign with personalization variables.</p>
+                    <p class="step-description">Add leads to email campaign with personalization.</p>
                     <div class="cards">
                         <div class="card">
                             <div class="card-title">Variables</div>
                             <ul>
-                                <li>email</li>
                                 <li>firstName</li>
                                 <li>companyName</li>
                             </ul>
@@ -424,8 +498,7 @@
                         <div class="card">
                             <div class="card-title">Campaign</div>
                             <ul>
-                                <li>Tuvana's campaign</li>
-                                <li>108 leads added</li>
+                                <li>108 leads</li>
                             </ul>
                         </div>
                     </div>
@@ -437,9 +510,7 @@
         </div>
 
         <footer>
-            <span>Harmonic</span>·<span>Affinity</span>·<span>Google Sheets</span>·<span>Lemlist</span>
-            <br><br>
-            January 2026
+            Palm Drive · January 2026
         </footer>
     </div>
 
@@ -479,7 +550,7 @@
                 animateCount(document.getElementById('sent-count'), 108, 1000);
                 animateCount(document.getElementById('opened-count'), 73, 1000);
                 animateCount(document.getElementById('replied-count'), 16, 800);
-            }, 300);
+            }, 800);
         });
     </script>
 </body>
