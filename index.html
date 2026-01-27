@@ -25,7 +25,6 @@
             padding: 80px 24px;
         }
 
-        /* Header */
         header {
             margin-bottom: 64px;
         }
@@ -52,28 +51,47 @@
             line-height: 1.5;
         }
 
-        /* Stats */
-        .stats {
+        .live-stats {
             display: flex;
             gap: 48px;
             margin-top: 32px;
-            padding-top: 24px;
+            padding: 32px 0;
             border-top: 1px solid #e8e8ed;
+            border-bottom: 1px solid #e8e8ed;
         }
 
-        .stat-value {
-            font-size: 28px;
+        .live-stat {
+            text-align: left;
+        }
+
+        .live-stat-value {
+            font-size: 32px;
             font-weight: 600;
             color: #1d1d1f;
+            font-variant-numeric: tabular-nums;
         }
 
-        .stat-label {
+        .live-stat-label {
             font-size: 13px;
             color: #86868b;
             margin-top: 2px;
         }
 
-        /* Steps */
+        .live-dot {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            background: #30d158;
+            border-radius: 50%;
+            margin-right: 6px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
         .steps {
             display: flex;
             flex-direction: column;
@@ -160,7 +178,6 @@
             padding-left: 44px;
         }
 
-        /* Cards */
         .cards {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -173,7 +190,7 @@
                 grid-template-columns: 1fr;
             }
             
-            .stats {
+            .live-stats {
                 flex-wrap: wrap;
                 gap: 32px;
             }
@@ -208,7 +225,6 @@
             border-top: 1px solid #e8e8ed;
         }
 
-        /* Tags */
         .tags {
             display: flex;
             gap: 8px;
@@ -225,46 +241,6 @@
             border-radius: 4px;
         }
 
-        /* Result */
-        .result {
-            margin-top: 64px;
-            padding: 48px;
-            background: #f5f5f7;
-            border-radius: 16px;
-            text-align: center;
-        }
-
-        .result h2 {
-            font-size: 24px;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-
-        .result p {
-            font-size: 15px;
-            color: #86868b;
-            margin-bottom: 32px;
-        }
-
-        .result-stats {
-            display: flex;
-            justify-content: center;
-            gap: 64px;
-        }
-
-        .result-value {
-            font-size: 40px;
-            font-weight: 600;
-            color: #1d1d1f;
-        }
-
-        .result-label {
-            font-size: 13px;
-            color: #86868b;
-            margin-top: 4px;
-        }
-
-        /* Footer */
         footer {
             margin-top: 64px;
             text-align: center;
@@ -284,18 +260,18 @@
             <h1>Lead Generation Pipeline</h1>
             <p class="lead">Automated extraction, verification, and outreach for startup founders from Harmonic to Lemlist.</p>
             
-            <div class="stats">
-                <div class="stat">
-                    <div class="stat-value">108</div>
-                    <div class="stat-label">Emails sent</div>
+            <div class="live-stats">
+                <div class="live-stat">
+                    <div class="live-stat-value"><span class="live-dot"></span><span id="sent-count">0</span></div>
+                    <div class="live-stat-label">Emails sent</div>
                 </div>
-                <div class="stat">
-                    <div class="stat-value">73</div>
-                    <div class="stat-label">Opened</div>
+                <div class="live-stat">
+                    <div class="live-stat-value"><span id="opened-count">0</span></div>
+                    <div class="live-stat-label">Opened</div>
                 </div>
-                <div class="stat">
-                    <div class="stat-value">16</div>
-                    <div class="stat-label">Replied</div>
+                <div class="live-stat">
+                    <div class="live-stat-value"><span id="replied-count">0</span></div>
+                    <div class="live-stat-label">Replied</div>
                 </div>
             </div>
         </header>
@@ -464,33 +440,13 @@
                             <div class="card-title">Campaign</div>
                             <ul>
                                 <li>Tuvana's campaign</li>
-                                <li>57 leads added</li>
-                                <li>2 skipped</li>
+                                <li>108 leads added</li>
                             </ul>
                         </div>
                     </div>
                     <div class="tags">
                         <span class="tag">Lemlist API</span>
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="result">
-            <h2>Pipeline Complete</h2>
-            <p>All verified leads are ready for outreach.</p>
-            <div class="result-stats">
-                <div class="result-stat">
-                    <div class="result-value">108</div>
-                    <div class="result-label">Sent</div>
-                </div>
-                <div class="result-stat">
-                    <div class="result-value">68%</div>
-                    <div class="result-label">Open rate</div>
-                </div>
-                <div class="result-stat">
-                    <div class="result-value">16</div>
-                    <div class="result-label">Replies</div>
                 </div>
             </div>
         </div>
@@ -507,17 +463,39 @@
             const step = header.parentElement;
             const wasActive = step.classList.contains('active');
             
-            // Close all steps
             document.querySelectorAll('.step').forEach(s => {
                 s.classList.remove('active');
             });
             
-            // Open clicked step if it wasn't active
             if (!wasActive) {
                 step.classList.add('active');
             }
         }
+
+        function animateCount(element, target, duration) {
+            let start = 0;
+            const increment = target / (duration / 16);
+            
+            function update() {
+                start += increment;
+                if (start < target) {
+                    element.textContent = Math.floor(start);
+                    requestAnimationFrame(update);
+                } else {
+                    element.textContent = target;
+                }
+            }
+            
+            update();
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                animateCount(document.getElementById('sent-count'), 108, 1000);
+                animateCount(document.getElementById('opened-count'), 73, 1000);
+                animateCount(document.getElementById('replied-count'), 16, 800);
+            }, 300);
+        });
     </script>
 </body>
 </html>
-
