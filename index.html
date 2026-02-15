@@ -323,9 +323,9 @@
         </div>
 
         <header>
-            <p class="overline">Outreach Pipeline</p>
-            <h1>Lead Generation</h1>
-            <p class="lead">Automated extraction, verification, and outreach for startup founders.</p>
+            <p class="overline">Outreach Automation</p>
+            <h1>Deal Sourcing Pipeline</h1>
+            <p class="lead">Automated sourcing, scoring, and outreach for early-stage startup founders about to raise. Harmonic AI signals, Affinity CRM deduplication, and Lemlist sequenced outreach.</p>
             
             <div class="live-stats">
                 <div class="live-stat">
@@ -348,32 +348,34 @@
                 <div class="step-header" onclick="toggleStep(this)">
                     <div class="step-header-left">
                         <div class="step-num">1</div>
-                        <div class="step-title">Extract from Harmonic</div>
+                        <div class="step-title">Source from Harmonic</div>
                     </div>
                     <div class="step-toggle">+</div>
                 </div>
                 <div class="step-content">
-                    <p class="step-description">Pull company data from watchlist and identify current CEOs and founders using the Harmonic API.</p>
+                    <p class="step-description">Search Harmonic AI for pre-seed and seed-stage startups showing fundraising signals — growing headcount, web traffic momentum, and 5+ company highlights.</p>
                     <div class="cards">
                         <div class="card">
-                            <div class="card-title">Input</div>
+                            <div class="card-title">Search Criteria</div>
                             <ul>
-                                <li>Watchlist URL</li>
-                                <li>API Key</li>
+                                <li>Pre-seed / Seed stage</li>
+                                <li>5+ highlights</li>
+                                <li>Growing headcount</li>
                             </ul>
                         </div>
                         <div class="card">
                             <div class="card-title">Output</div>
                             <ul>
-                                <li>Company names</li>
-                                <li>CEO/Founder names</li>
-                                <li>Email addresses</li>
+                                <li>~1,000 company URNs</li>
+                                <li>Full company profiles</li>
+                                <li>Traction metrics</li>
                             </ul>
                         </div>
                     </div>
                     <div class="tags">
                         <span class="tag">Harmonic API</span>
                         <span class="tag">Python</span>
+                        <span class="tag">Automated</span>
                     </div>
                 </div>
             </div>
@@ -382,33 +384,34 @@
                 <div class="step-header" onclick="toggleStep(this)">
                     <div class="step-header-left">
                         <div class="step-num">2</div>
-                        <div class="step-title">Verify Data</div>
+                        <div class="step-title">Filter & Score</div>
                     </div>
                     <div class="step-toggle">+</div>
                 </div>
                 <div class="step-content">
-                    <p class="step-description">Manual verification using Harmonic Scout and LinkedIn to confirm accuracy.</p>
+                    <p class="step-description">Apply hard filters to remove non-fits, then rank remaining companies by a composite raise score based on growth signals. Only companies with a CEO name and verified email pass through.</p>
                     <div class="cards">
                         <div class="card">
-                            <div class="card-title">Verification</div>
+                            <div class="card-title">Excluded</div>
                             <ul>
-                                <li>CEO is current</li>
-                                <li>Email is valid</li>
-                                <li>Work email only</li>
+                                <li>China, Russia, Ukraine, India</li>
+                                <li>Hardware, biotech, nonprofits</li>
+                                <li>Pure consumer / B2C</li>
                             </ul>
                         </div>
                         <div class="card">
-                            <div class="card-title">Removed</div>
+                            <div class="card-title">Raise Score Signals</div>
                             <ul>
-                                <li>No email found</li>
-                                <li>Generic inbox</li>
-                                <li>Personal email</li>
+                                <li>Headcount growth (90d, 180d)</li>
+                                <li>Web traffic momentum</li>
+                                <li>LinkedIn follower growth</li>
+                                <li>Stealth emergence date</li>
                             </ul>
                         </div>
                     </div>
                     <div class="tags">
-                        <span class="tag">Harmonic Scout</span>
-                        <span class="tag">LinkedIn</span>
+                        <span class="tag">Python</span>
+                        <span class="tag">Automated</span>
                     </div>
                 </div>
             </div>
@@ -417,30 +420,33 @@
                 <div class="step-header" onclick="toggleStep(this)">
                     <div class="step-header-left">
                         <div class="step-num">3</div>
-                        <div class="step-title">Export to Sheets</div>
+                        <div class="step-title">Dedupe against Affinity</div>
                     </div>
                     <div class="step-toggle">+</div>
                 </div>
                 <div class="step-content">
-                    <p class="step-description">Push verified data to Google Sheets for tracking and collaboration.</p>
+                    <p class="step-description">Cross-reference every candidate against Affinity CRM. If a company has existing list entries, interaction notes, or appears anywhere in the pipeline — it gets dropped automatically.</p>
                     <div class="cards">
                         <div class="card">
-                            <div class="card-title">Data</div>
+                            <div class="card-title">Search Method</div>
                             <ul>
-                                <li>Company, Name</li>
-                                <li>Email, Domain</li>
+                                <li>Match by domain</li>
+                                <li>Match by normalized name</li>
+                                <li>Check all list entries</li>
                             </ul>
                         </div>
                         <div class="card">
-                            <div class="card-title">Tracking</div>
+                            <div class="card-title">Skip If</div>
                             <ul>
-                                <li>Affinity Status</li>
-                                <li>Contacted</li>
+                                <li>On any Affinity list</li>
+                                <li>Has interaction notes</li>
+                                <li>Portfolio company</li>
                             </ul>
                         </div>
                     </div>
                     <div class="tags">
-                        <span class="tag">Google Sheets</span>
+                        <span class="tag">Affinity API</span>
+                        <span class="tag">Automated</span>
                     </div>
                 </div>
             </div>
@@ -449,30 +455,34 @@
                 <div class="step-header" onclick="toggleStep(this)">
                     <div class="step-header-left">
                         <div class="step-num">4</div>
-                        <div class="step-title">Check Affinity</div>
+                        <div class="step-title">Human Review</div>
                     </div>
                     <div class="step-toggle">+</div>
                 </div>
                 <div class="step-content">
-                    <p class="step-description">Cross-reference against CRM to avoid duplicates.</p>
+                    <p class="step-description">Top ~100 scored companies land in a Google Sheet with full metrics and CEO contact info. Manual review before anything goes out — clear rows you don't want, approve the rest.</p>
                     <div class="cards">
                         <div class="card">
-                            <div class="card-title">Search</div>
+                            <div class="card-title">Sheet Columns</div>
                             <ul>
-                                <li>Match by domain</li>
-                                <li>Check list</li>
+                                <li>Company, CEO, Email</li>
+                                <li>Raise score, Stage, Funding</li>
+                                <li>Headcount & web growth</li>
+                                <li>Tags, Highlights, Description</li>
                             </ul>
                         </div>
                         <div class="card">
-                            <div class="card-title">Results</div>
+                            <div class="card-title">Actions</div>
                             <ul>
-                                <li>12 existing</li>
-                                <li>47 new</li>
+                                <li>Review metrics</li>
+                                <li>Clear unwanted rows</li>
+                                <li>Approve for outreach</li>
                             </ul>
                         </div>
                     </div>
                     <div class="tags">
-                        <span class="tag">Affinity API</span>
+                        <span class="tag">Google Sheets</span>
+                        <span class="tag">Manual</span>
                     </div>
                 </div>
             </div>
@@ -481,36 +491,75 @@
                 <div class="step-header" onclick="toggleStep(this)">
                     <div class="step-header-left">
                         <div class="step-num">5</div>
+                        <div class="step-title">Add to Affinity CRM</div>
+                    </div>
+                    <div class="step-toggle">+</div>
+                </div>
+                <div class="step-content">
+                    <p class="step-description">Approved companies get added to the Affinity 1a Sourcing list. Creates the organization record if it doesn't already exist in the CRM.</p>
+                    <div class="cards">
+                        <div class="card">
+                            <div class="card-title">Process</div>
+                            <ul>
+                                <li>Search for existing org</li>
+                                <li>Create if not found</li>
+                                <li>Add to 1a Sourcing list</li>
+                            </ul>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">CRM Record</div>
+                            <ul>
+                                <li>Company name</li>
+                                <li>Domain</li>
+                                <li>List entry timestamp</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="tags">
+                        <span class="tag">Affinity API</span>
+                        <span class="tag">Automated</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-header" onclick="toggleStep(this)">
+                    <div class="step-header-left">
+                        <div class="step-num">6</div>
                         <div class="step-title">Push to Lemlist</div>
                     </div>
                     <div class="step-toggle">+</div>
                 </div>
                 <div class="step-content">
-                    <p class="step-description">Add leads to email campaign with personalization.</p>
+                    <p class="step-description">Final approved leads get pushed to a Lemlist campaign for sequenced cold email outreach targeting the CEO directly.</p>
                     <div class="cards">
                         <div class="card">
-                            <div class="card-title">Variables</div>
+                            <div class="card-title">Lead Data</div>
                             <ul>
                                 <li>firstName</li>
                                 <li>companyName</li>
+                                <li>email</li>
                             </ul>
                         </div>
                         <div class="card">
                             <div class="card-title">Campaign</div>
                             <ul>
-                                <li>108 leads</li>
+                                <li>Sequenced emails</li>
+                                <li>Personalized variables</li>
+                                <li>CEO cold outreach</li>
                             </ul>
                         </div>
                     </div>
                     <div class="tags">
                         <span class="tag">Lemlist API</span>
+                        <span class="tag">Automated</span>
                     </div>
                 </div>
             </div>
         </div>
 
         <footer>
-            Palm Drive · January 2026
+            Palm Drive · February 2026
         </footer>
     </div>
 
