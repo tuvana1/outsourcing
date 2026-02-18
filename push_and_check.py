@@ -1,6 +1,7 @@
 import os
 import re
 import time
+import csv
 from datetime import datetime
 import requests
 import gspread
@@ -11,7 +12,7 @@ from google.oauth2.service_account import Credentials
 AFFINITY_API_KEY = os.environ["AFFINITY_API_KEY"]
 SPREADSHEET_ID = "1sdbE6V-qVNuKo9LKe42i8x9Nj6ENX8N5oeZsSjRwT9o"
 TARGET_LIST_NAME = "1a Sourcing List"
-TARGET_LIST_ID = 21233  # Pre-fetched for speed
+TARGET_LIST_ID = 21233
 
 AFFINITY_BASE = "https://api.affinity.co"
 
@@ -64,15 +65,12 @@ class AffinityClient:
             return None
         
         domain = domain.lower().strip()
-        
-        # Search using the domain as term
         data = self._get("/organizations", {"term": domain, "page_size": 10})
         orgs = data.get("organizations", []) if isinstance(data, dict) else data
         
         if not orgs:
             return None
         
-        # ONLY return if exact domain match
         for org in orgs:
             org_domain = (org.get("domain") or "").lower().strip()
             if org_domain == domain:
@@ -91,19 +89,16 @@ class AffinityClient:
         if not orgs:
             return None
         
-        # ONLY return if normalized name matches exactly
         norm_search = normalize_name(name)
         for org in orgs:
             org_name = org.get("name") or ""
             if normalize_name(org_name) == norm_search:
                 return org
         
-        # NO fallback - don't return wrong company
         return None
     
     def is_org_in_list(self, org_id: int, list_id: int) -> bool:
         """Check if organization is in a specific list."""
-        # Get list entries for this org
         data = self._get(f"/organizations/{org_id}/list-entries")
         entries = data if isinstance(data, list) else data.get("list_entries", [])
         
@@ -112,6 +107,22 @@ class AffinityClient:
                 return True
         
         return False
+    
+    def get_org_list_entry(self, org_id: int, list_id: int) -> dict:
+        """Get the list entry for an org on a specific list."""
+        data = self._get(f"/organizations/{org_id}/list-entries")
+        entries = data if isinstance(data, list) else data.get("list_entries", [])
+        
+        for entry in entries:
+            if entry.get("list_id") == list_id:
+                return entry
+        
+        return None
+    
+    def get_field_values(self, list_entry_id: int) -> dict:
+        """Get field values for a list entry."""
+        data = self._get(f"/field-values", {"list_entry_id": list_entry_id})
+        return data if isinstance(data, list) else data.get("field_values", [])
     
     def get_org_interactions(self, org_id: int) -> list:
         """Get interactions for an organization."""
@@ -131,8 +142,17 @@ def get_sheet():
 
 def main():
     print("=" * 60)
-    print("Affinity Check - Updating existing spreadsheet")
+    print("Push to Spreadsheet and Check Affinity")
     print("=" * 60)
+    
+    # Read CSV
+    print("\nReading lemlist_leads.csv...")
+    rows = []
+    with open("lemlist_leads.csv", "r") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            rows.append(row)
+    print(f"  Found {len(rows)} companies")
     
     # Connect to Affinity
     affinity = AffinityClient(AFFINITY_API_KEY)
@@ -141,62 +161,34 @@ def main():
     print("\nConnecting to Google Sheet...")
     sheet = get_sheet()
     
-    # Read all data
-    all_data = sheet.get_all_values()
-    if not all_data:
-        print("ERROR: Spreadsheet is empty!")
-        return
+    # Clear existing data and set headers
+    sheet.clear()
     
-    headers = all_data[0]
-    rows = all_data[1:]
-    print(f"  Found {len(rows)} company rows")
+    headers = [
+        "companyName", "firstName", "email", "ceoName", "domain",
+        "On 1a Sourcing List", "Affinity Status", "Contacted?", "Responded?",
+        "Comments", "Last Checked"
+    ]
     
-    # Find existing column indices
-    def get_col_idx(name):
-        try:
-            return headers.index(name)
-        except ValueError:
-            return -1
+    # Process each company
+    print(f"\nProcessing {len(rows)} companies...")
+    output_rows = [headers]
     
-    company_col = get_col_idx("companyName")
-    email_col = get_col_idx("email")
-    
-    if company_col == -1:
-        print("ERROR: 'companyName' column not found!")
-        return
-    
-    # Define new columns
-    new_cols = ["In Affinity", "Affinity List Name", "Affinity Org ID", 
-                "Contacted", "Contacted Evidence", "Last Checked"]
-    
-    # Find or create column indices
-    col_indices = {}
-    for col_name in new_cols:
-        idx = get_col_idx(col_name)
-        if idx == -1:
-            headers.append(col_name)
-            idx = len(headers) - 1
-        col_indices[col_name] = idx
-    
-    # Update header row
-    sheet.update('A1', [headers])
-    
-    # Process each row
-    print(f"\nChecking {len(rows)} companies against Affinity '{TARGET_LIST_NAME}'...")
-    updates = []
-    
-    for row_idx, row in enumerate(rows):
-        row_num = row_idx + 2
-        
-        # Extend row if needed
-        while len(row) < len(headers):
-            row.append("")
-        
-        company_name = row[company_col] if company_col < len(row) else ""
-        email = row[email_col] if email_col >= 0 and email_col < len(row) else ""
+    for idx, row in enumerate(rows):
+        company_name = row.get("companyName", "")
+        first_name = row.get("firstName", "")
+        email = row.get("email", "")
+        ceo_name = row.get("ceoName", "")
         domain = extract_domain(email)
         
-        print(f"  [{row_num}] {company_name}...", end=" ", flush=True)
+        print(f"  [{idx+1}/{len(rows)}] {company_name}...", end=" ", flush=True)
+        
+        # Default values
+        on_list = "No"
+        affinity_status = ""
+        contacted = ""
+        responded = ""
+        comments = "No interactions recorded"
         
         # Search for org in Affinity
         org = None
@@ -209,50 +201,68 @@ def main():
             org_id = org.get("id")
             
             # Check if in target list
-            in_list = affinity.is_org_in_list(org_id, TARGET_LIST_ID)
+            list_entry = affinity.get_org_list_entry(org_id, TARGET_LIST_ID)
             
-            if in_list:
-                row[col_indices["In Affinity"]] = "Yes"
-                row[col_indices["Affinity List Name"]] = TARGET_LIST_NAME
-                row[col_indices["Affinity Org ID"]] = str(org_id)
-                row[col_indices["Contacted"]] = "Check list"
-                row[col_indices["Contacted Evidence"]] = "See Responded? field in Affinity"
+            if list_entry:
+                on_list = "Yes"
+                entry_id = list_entry.get("id")
+                
+                # Get field values
+                field_values = affinity.get_field_values(entry_id)
+                for fv in field_values:
+                    field_name = fv.get("field", {}).get("name", "") if isinstance(fv.get("field"), dict) else ""
+                    value = fv.get("value")
+                    
+                    if "status" in field_name.lower():
+                        affinity_status = str(value) if value else ""
+                    elif "contacted" in field_name.lower() and "?" in field_name:
+                        contacted = "Yes" if value else "No"
+                    elif "responded" in field_name.lower():
+                        responded = "Yes" if value else "No"
+                
+                # Get interactions
+                interactions = affinity.get_org_interactions(org_id)
+                if interactions:
+                    interaction_list = []
+                    for i in interactions[:5]:  # Last 5
+                        i_type = i.get("type", "")
+                        i_date = i.get("date", "")[:10] if i.get("date") else ""
+                        i_subj = (i.get("subject") or "")[:50]
+                        interaction_list.append(f"{i_date} {i_type}: {i_subj}")
+                    comments = " | ".join(interaction_list) if interaction_list else "No interactions recorded"
+                
                 print(f"✓ In '{TARGET_LIST_NAME}'")
             else:
-                # Found in Affinity global DB but not on the target list
-                row[col_indices["In Affinity"]] = "No"
-                row[col_indices["Affinity List Name"]] = ""
-                row[col_indices["Affinity Org ID"]] = str(org_id)
-                row[col_indices["Contacted"]] = "Not tracked"
-                row[col_indices["Contacted Evidence"]] = "Exists in Affinity, not on any list"
-                print(f"⊘ In Affinity DB, not on list")
+                print("⊘ Not on list")
         else:
-            # Not found in Affinity at all
-            row[col_indices["In Affinity"]] = "No"
-            row[col_indices["Affinity List Name"]] = ""
-            row[col_indices["Affinity Org ID"]] = ""
-            row[col_indices["Contacted"]] = "Unknown"
-            row[col_indices["Contacted Evidence"]] = "Not found in Affinity"
             print("✗ Not found")
         
-        row[col_indices["Last Checked"]] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        updates.append(row)
+        last_checked = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        output_rows.append([
+            company_name, first_name, email, ceo_name, domain,
+            on_list, affinity_status, contacted, responded,
+            comments, last_checked
+        ])
+        
         time.sleep(0.2)  # Rate limiting
     
-    # Write all updates
-    print("\nWriting results to spreadsheet...")
-    sheet.update('A2', updates)
+    # Write to spreadsheet
+    print("\nWriting to spreadsheet...")
+    sheet.update('A1', output_rows)
     
     # Summary
-    in_affinity = sum(1 for r in updates if r[col_indices["In Affinity"]] == "Yes")
-    contacted = sum(1 for r in updates if r[col_indices["Contacted"]] == "Yes")
+    on_list_count = sum(1 for r in output_rows[1:] if r[5] == "Yes")
     
     print(f"\n{'=' * 60}")
-    print(f"Done! Updated {len(updates)} rows")
-    print(f"  In '{TARGET_LIST_NAME}': {in_affinity}/{len(updates)}")
-    print(f"  Contacted: {contacted}/{len(updates)}")
+    print(f"Done! Wrote {len(output_rows)-1} companies to spreadsheet")
+    print(f"  On '{TARGET_LIST_NAME}': {on_list_count}/{len(output_rows)-1}")
     print(f"\nSpreadsheet: https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}")
     print(f"{'=' * 60}")
 
 if __name__ == "__main__":
     main()
+
+
+
+
