@@ -7,8 +7,8 @@ from google.oauth2.service_account import Credentials
 
 AFFINITY_API_KEY = os.environ["AFFINITY_API_KEY"]
 AFFINITY_BASE = "https://api.affinity.co"
-SPREADSHEET_ID = "1sdbE6V-qVNuKo9LKe42i8x9Nj6ENX8N5oeZsSjRwT9o"
-LIST_ID = 21233
+SPREADSHEET_ID = os.environ["SPREADSHEET_ID"]
+LIST_ID = int(os.environ["AFFINITY_LIST_ID"])
 
 session = requests.Session()
 session.auth = ('', AFFINITY_API_KEY)

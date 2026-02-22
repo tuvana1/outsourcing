@@ -8,8 +8,8 @@ from google.oauth2.service_account import Credentials
 # ---------- Configuration ----------
 
 LEMLIST_API_KEY = os.environ["LEMLIST_API_KEY"]
-CAMPAIGN_ID = "cam_uReLK4ErdrGTwCkLw"
-SPREADSHEET_ID = "1sdbE6V-qVNuKo9LKe42i8x9Nj6ENX8N5oeZsSjRwT9o"
+CAMPAIGN_ID = os.environ["LEMLIST_CAMPAIGN_ID"]
+SPREADSHEET_ID = os.environ["SPREADSHEET_ID"]
 AFFINITY_API_KEY = os.environ["AFFINITY_API_KEY"]
 AFFINITY_BASE = "https://api.affinity.co"
 

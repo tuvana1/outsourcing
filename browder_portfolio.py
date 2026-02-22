@@ -11,13 +11,13 @@ from google.oauth2.service_account import Credentials
 
 HARMONIC_API_KEY = os.environ["HARMONIC_API_KEY"]
 AFFINITY_API_KEY = os.environ["AFFINITY_API_KEY"]
-SPREADSHEET_ID = "1sdbE6V-qVNuKo9LKe42i8x9Nj6ENX8N5oeZsSjRwT9o"
+SPREADSHEET_ID = os.environ["SPREADSHEET_ID"]
 
 HARMONIC_BASE = "https://api.harmonic.ai"
 HARMONIC_HEADERS = {"apikey": HARMONIC_API_KEY, "Content-Type": "application/json"}
 AFFINITY_BASE = "https://api.affinity.co"
 
-TARGET_LIST_ID = 21233  # 1a Sourcing List
+TARGET_LIST_ID = int(os.environ["AFFINITY_LIST_ID"])  # 1a Sourcing List
 
 # Joshua Browder's known portfolio from web research (supplementing Harmonic)
 WEB_SOURCED_COMPANIES = [

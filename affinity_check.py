@@ -9,9 +9,9 @@ from google.oauth2.service_account import Credentials
 # ---------- Configuration ----------
 
 AFFINITY_API_KEY = os.environ["AFFINITY_API_KEY"]
-SPREADSHEET_ID = "1sdbE6V-qVNuKo9LKe42i8x9Nj6ENX8N5oeZsSjRwT9o"
+SPREADSHEET_ID = os.environ["SPREADSHEET_ID"]
 TARGET_LIST_NAME = "1a Sourcing List"
-TARGET_LIST_ID = 21233  # Pre-fetched for speed
+TARGET_LIST_ID = int(os.environ["AFFINITY_LIST_ID"])
 
 AFFINITY_BASE = "https://api.affinity.co"
 

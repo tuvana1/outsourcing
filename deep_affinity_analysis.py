@@ -10,7 +10,7 @@ from google.oauth2.service_account import Credentials
 # ---------- Configuration ----------
 
 AFFINITY_API_KEY = os.environ["AFFINITY_API_KEY"]
-SPREADSHEET_ID = "1sdbE6V-qVNuKo9LKe42i8x9Nj6ENX8N5oeZsSjRwT9o"
+SPREADSHEET_ID = os.environ["SPREADSHEET_ID"]
 AFFINITY_BASE = "https://api.affinity.co"
 
 # Key lists to check
