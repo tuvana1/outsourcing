@@ -20,20 +20,23 @@ HARMONIC_BASE = "https://api.harmonic.ai"
 HARMONIC_HEADERS = {"apikey": HARMONIC_API_KEY, "Content-Type": "application/json"}
 AFFINITY_BASE = "https://api.affinity.co"
 
-ALLOWED_COUNTRIES = {"united states", "us", "usa"}
-EXCLUDED_TAGS_KEYWORDS = {
-    "hardware", "biotech", "biotechnology", "pharmaceutical", "medical devices",
-    "semiconductors", "chip design", "electronics manufacturing", "robotics",
-    "3d printing", "manufacturing", "clean energy", "solar", "battery",
-    "cannabis", "marijuana", "nonprofit", "non-profit", "charity",
-    "government", "public sector", "real estate", "construction",
-    "agriculture", "mining", "oil", "gas", "energy",
-    "healthcare", "health care", "healthtech", "health tech", "medical",
-    "clinical", "patient", "hospital", "telehealth", "telemedicine",
+TARGET_LIST_ID = int(os.environ["AFFINITY_LIST_ID"])
+
+# Keywords that signal stablecoin yield / consumer fintech
+STABLECOIN_YIELD_KEYWORDS = {
+    "stablecoin", "stable coin", "usdc", "usdt", "dai", "yield", "savings",
+    "interest", "apy", "earn", "high-yield", "high yield", "returns",
+    "deposit", "dollar", "digital dollar", "crypto savings", "defi",
+    "neobank", "fintech", "money market", "treasury", "t-bill", "tbill",
+    "tokenized", "on-chain", "onchain", "rwa", "real world asset",
 }
-HEALTHCARE_NAME_KEYWORDS = {
-    "health", "medical", "care", "clinic", "pharma", "bio",
-    "therapeutics", "diagnostics", "wellness", "patient",
+
+# Consumer signals
+CONSUMER_KEYWORDS = {
+    "consumer", "personal finance", "b2c", "retail", "individuals",
+    "everyday", "app", "mobile", "wallet", "account", "save", "saving",
+    "spend", "payment", "remittance", "transfer", "bank", "banking",
+    "neobank", "challenger bank",
 }
 
 # Elite tech companies for founder scoring
@@ -49,6 +52,8 @@ ELITE_COMPANIES = {
     "mckinsey", "bain", "bcg", "goldman sachs", "morgan stanley",
     "jp morgan", "jpmorgan", "a16z", "andreessen", "sequoia",
     "benchmark", "accel", "greylock", "kleiner", "y combinator", "yc",
+    "circle", "binance", "kraken", "gemini", "ftx", "consensys",
+    "chainalysis", "alchemy", "fireblocks", "anchorage",
 }
 ELITE_SCHOOLS = {
     "stanford", "mit", "harvard", "yale", "princeton", "caltech",
@@ -56,14 +61,6 @@ ELITE_SCHOOLS = {
     "wharton", "booth", "kellogg", "sloan", "haas",
     "oxford", "cambridge", "iit",
 }
-NONPROFIT_NAME_KEYWORDS = {
-    "foundation", "council", "association", "institute", "society",
-    "charity", "nonprofit", "non-profit", "ngo", "ministry",
-    "committee", "coalition", "alliance", "federation", "bureau",
-    "center for", "centre for", "crisis center", "rape crisis",
-}
-
-TARGET_LIST_ID = int(os.environ["AFFINITY_LIST_ID"])
 
 # ---------- Helpers ----------
 
@@ -80,81 +77,60 @@ def normalize_name(name):
     name = re.sub(r'\s+', ' ', name).strip()
     return name
 
-def is_us_based(location):
-    country = (location.get("country") or "").lower().strip()
-    return country in ALLOWED_COUNTRIES
-
-def is_excluded_industry(tags):
-    for tag in (tags or []):
-        display = (tag.get("display_value") or "").lower()
-        if any(exc in display for exc in EXCLUDED_TAGS_KEYWORDS):
-            return True
-    return False
-
-def is_nonprofit(name, company_type, tags, description):
-    """Detect non-profits, NGOs, government entities."""
-    name_lower = (name or "").lower()
-    for kw in NONPROFIT_NAME_KEYWORDS:
-        if kw in name_lower:
-            return True
-    ct = (company_type or "").lower()
-    if ct in ("nonprofit", "government", "non_profit"):
-        return True
-    desc_lower = (description or "").lower()
-    if "non-profit" in desc_lower or "nonprofit" in desc_lower or "501(c)" in desc_lower:
-        return True
-    return False
-
-def is_b2b_saas(tags, customer_type, description):
-    """Return True if company looks like B2B SaaS."""
-    ct = (customer_type or "").lower()
-    tag_texts = [(t.get("display_value") or "").lower() for t in (tags or [])]
-    desc_lower = (description or "").lower()
-    b2b_kw = ["saas", "enterprise", "business", "b2b", "infrastructure", "devtools",
-              "developer", "api", "platform", "fintech", "software", "cloud",
-              "analytics", "automation", "data", "cybersecurity", "ai", "machine learning"]
-    consumer_kw = ["consumer", "social media", "gaming", "entertainment", "fashion",
-                   "food delivery", "dating", "music", "sports", "fitness", "travel", "lifestyle"]
-    b2b_signals = sum(1 for t in tag_texts if any(w in t for w in b2b_kw))
-    consumer_signals = sum(1 for t in tag_texts if any(w in t for w in consumer_kw))
-    # Check description for B2B signals
-    desc_b2b = any(w in desc_lower for w in ["b2b", "saas", "enterprise", "businesses", "teams", "companies", "organizations", "workflow", "platform for"])
-    if "b2b" in ct:
-        return True
-    if b2b_signals >= 2:
-        return True
-    if b2b_signals >= 1 and desc_b2b:
-        return True
-    if "b2c" in ct and consumer_signals > 0:
-        return False
-    if consumer_signals > b2b_signals:
-        return False
-    # If ambiguous but has B2B description signals, include it
-    if desc_b2b and consumer_signals == 0:
-        return True
-    return False
-
-def is_healthcare(name, tags, description):
-    """Detect healthcare companies."""
+def matches_stablecoin_yield(tags, description, name):
+    """Check if company is a consumer fintech offering yield through stablecoins/crypto."""
     desc_lower = (description or "").lower()
     name_lower = (name or "").lower()
     tag_texts = [(t.get("display_value") or "").lower() for t in (tags or [])]
-    hc_kw = ["healthcare", "health care", "healthtech", "medical", "clinical",
-             "patient", "hospital", "telehealth", "telemedicine", "pharma",
-             "therapeutics", "diagnostics", "ehr", "emr", "hipaa"]
-    if any(any(kw in t for kw in hc_kw) for t in tag_texts):
-        return True
-    if any(kw in desc_lower for kw in hc_kw):
-        return True
-    return False
+    all_text = desc_lower + " " + name_lower + " " + " ".join(tag_texts)
+
+    # Hard exclude: not fintech at all
+    exclude_keywords = [
+        "healthcare", "health care", "medical", "clinical", "patient", "hospital",
+        "biotech", "pharma", "therapeutics", "diagnostics", "wellness app",
+        "fitness", "meditation", "sleep", "mental health", "therapy",
+        "real estate", "property", "construction", "agriculture",
+        "gaming", "game studio", "esports", "music streaming", "podcast",
+        "food delivery", "restaurant", "recipe", "grocery",
+        "dating", "social media", "social network",
+        "education", "edtech", "school", "tutoring", "learning platform",
+        "hr tech", "recruiting", "hiring", "staffing",
+        "legal tech", "law firm", "compliance only",
+        "advertising", "ad tech", "marketing automation",
+        "manufacturing", "hardware", "robotics", "semiconductor",
+        "longevity", "anti-aging", "skincare", "beauty",
+        "travel", "booking", "hotel",
+    ]
+    if any(kw in all_text for kw in exclude_keywords):
+        return False
+
+    # MUST have crypto/stablecoin/DeFi signal
+    crypto_signals = ["stablecoin", "stable coin", "usdc", "usdt", "dai", "pyusd",
+                      "crypto", "defi", "decentralized finance",
+                      "on-chain", "onchain", "blockchain", "web3",
+                      "tokenized", "rwa", "real world asset", "digital dollar",
+                      "digital asset", "cryptocurrency"]
+    has_crypto = any(kw in all_text for kw in crypto_signals)
+
+    if not has_crypto:
+        return False
+
+    # Must ALSO have yield/savings/fintech consumer signal
+    yield_fintech_signals = [
+        "yield", "apy", "earn", "interest", "savings", "high-yield", "high yield",
+        "returns", "money market", "t-bill", "tbill", "treasury",
+        "neobank", "banking", "wallet", "deposit", "fintech",
+        "savings account", "checking", "spend", "payment",
+        "dollar account", "cash", "remittance",
+    ]
+    has_yield_or_fintech = any(kw in all_text for kw in yield_fintech_signals)
+
+    return has_yield_or_fintech
 
 def compute_founder_score(person):
-    """Score founder based on background. Higher = more impressive."""
     if not person:
         return 0
     score = 0
-
-    # Check experience for elite companies
     experience = person.get("experience") or []
     seen_companies = set()
     for exp in experience:
@@ -163,15 +139,12 @@ def compute_founder_score(person):
         for elite in ELITE_COMPANIES:
             if elite in co and co not in seen_companies:
                 seen_companies.add(co)
-                score += 15  # Elite company experience
-                # Extra points for senior roles
+                score += 15
                 if any(w in title for w in ["cto", "vp", "director", "head of", "chief", "principal", "staff", "lead"]):
                     score += 10
                 elif any(w in title for w in ["senior", "manager"]):
                     score += 5
                 break
-
-    # Check education for elite schools
     edu_list = person.get("education") or []
     for edu in edu_list:
         school = edu.get("school") or {}
@@ -180,8 +153,6 @@ def compute_founder_score(person):
             if elite in school_name:
                 score += 10
                 break
-
-    # Person highlights (Harmonic signals like "Prior Exit", "Top University")
     p_highlights = person.get("highlights") or []
     for h in p_highlights:
         cat = (h.get("category") or "").lower()
@@ -193,98 +164,48 @@ def compute_founder_score(person):
             score += 10
         elif "serial_founder" in cat or "serial founder" in cat:
             score += 15
-
     return score
 
-def compute_raise_score(company):
-    """Score how likely a company is to raise soon. Higher = more likely."""
+def compute_relevance_score(company):
+    """Score how relevant company is to stablecoin yield for consumers."""
     score = 0
-    tm = company.get("traction_metrics") or {}
+    desc_lower = (company.get("description") or "").lower()
+    name_lower = (company.get("name") or "").lower()
+    tags = company.get("tags") or []
+    tag_texts = [(t.get("display_value") or "").lower() for t in tags]
+    all_text = desc_lower + " " + name_lower + " " + " ".join(tag_texts)
 
-    # Headcount growth (hiring = about to raise or just raised)
+    # Strong stablecoin signals
+    for kw in ["stablecoin", "stable coin", "usdc", "usdt"]:
+        if kw in all_text:
+            score += 20
+    # Yield signals
+    for kw in ["yield", "apy", "earn", "interest", "savings", "high-yield"]:
+        if kw in all_text:
+            score += 15
+    # Crypto/DeFi signals
+    for kw in ["defi", "crypto", "on-chain", "onchain", "blockchain", "web3", "tokenized", "rwa"]:
+        if kw in all_text:
+            score += 10
+    # Consumer fintech signals
+    for kw in ["neobank", "wallet", "consumer", "personal finance", "banking app", "savings account"]:
+        if kw in all_text:
+            score += 10
+    # Traction signals
+    tm = company.get("traction_metrics") or {}
     hc = tm.get("corrected_headcount") or {}
     hc_180 = hc.get("180d_ago", {})
     hc_change = hc_180.get("change")
     if hc_change and hc_change > 0:
-        score += min(hc_change * 5, 25)  # Up to 25 pts
-    hc_90 = hc.get("90d_ago", {})
-    hc_change_90 = hc_90.get("change")
-    if hc_change_90 and hc_change_90 > 0:
-        score += min(hc_change_90 * 8, 25)  # Recent growth more valuable
-
-    # Web traffic growth
-    wt = tm.get("web_traffic") or {}
-    wt_180 = wt.get("180d_ago", {})
-    wt_pct = wt_180.get("percent_change")
-    if wt_pct and wt_pct > 0:
-        score += min(wt_pct / 10, 20)  # Up to 20 pts
-
-    # LinkedIn follower growth (awareness/traction)
-    li = tm.get("linkedin_follower_count") or {}
-    li_180 = li.get("180d_ago", {})
-    li_pct = li_180.get("percent_change")
-    if li_pct and li_pct > 0:
-        score += min(li_pct / 5, 15)  # Up to 15 pts
-
-    # Highlights count (more signals = more active)
+        score += min(hc_change * 3, 15)
     highlights = company.get("highlights") or []
-    score += min(len(highlights) * 3, 15)  # Up to 15 pts
-
-    # Stealth emergence (recently emerged = about to raise)
-    emergence = company.get("stealth_emergence_date")
-    if emergence:
-        try:
-            ed = datetime.fromisoformat(emergence.replace("Z", "+00:00"))
-            days_ago = (datetime.now(ed.tzinfo) - ed).days
-            if days_ago < 90:
-                score += 20
-            elif days_ago < 180:
-                score += 15
-            elif days_ago < 365:
-                score += 10
-        except:
-            pass
-
-    # Low funding relative to headcount = needs to raise
-    funding = company.get("funding") or {}
-    funding_total = funding.get("funding_total") or 0
-    headcount = company.get("headcount") or company.get("corrected_headcount") or 1
-    if isinstance(headcount, dict):
-        headcount = headcount.get("latest_metric_value") or 1
-    if headcount > 3 and funding_total < 2_000_000:
-        score += 10  # Team but low funding = needs capital
-    if funding_total == 0 and headcount > 2:
-        score += 15  # No funding but building team = actively looking
-
-    # Founding date - newer companies more likely raising
-    fd = company.get("founding_date") or {}
-    fd_date = fd.get("date") or ""
-    year = None
-    if fd_date:
-        try:
-            year = int(fd_date[:4])
-        except (ValueError, IndexError):
-            pass
-    if year and year >= 2024:
-        score += 10
-    elif year and year >= 2023:
-        score += 5
-
-    # Sweet spot for our check size ($500K-$5M): companies with $1-5M raised
-    # are likely raising their next round soon
-    if 1_000_000 <= funding_total <= 5_000_000 and headcount > 5:
-        score += 15  # Right in our sweet spot - likely raising Series A
-    elif funding_total < 1_000_000 and headcount > 3:
-        score += 10  # Pre-seed looking for seed
+    score += min(len(highlights) * 2, 10)
 
     return score
 
 def extract_founder_background(person):
-    """Extract education, past experience, LinkedIn from person data."""
     if not person:
         return {"education": "", "prev_companies": "", "linkedin": "", "headline": "", "highlights": ""}
-
-    # Education
     edu_list = person.get("education") or []
     edu_parts = []
     for edu in edu_list:
@@ -300,8 +221,6 @@ def extract_founder_background(person):
                 parts.append(field)
             edu_parts.append(" - ".join(parts))
     education = "; ".join(edu_parts[:3])
-
-    # Previous companies (non-current positions, most recent first)
     experience = person.get("experience") or []
     prev = []
     for exp in experience:
@@ -311,44 +230,40 @@ def extract_founder_background(person):
             if co and co != "urn:harmonic:company:-1":
                 prev.append(f"{title} @ {co}" if title else co)
     prev_companies = "; ".join(prev[:4])
-
-    # LinkedIn
     socials = person.get("socials") or {}
     li = socials.get("LINKEDIN") or {}
     linkedin = li.get("url") or ""
-
-    # Headline
     headline = person.get("linkedin_headline") or ""
-
-    # Person highlights
     p_highlights = person.get("highlights") or []
     highlight_texts = []
     for h in p_highlights:
         cat = h.get("category") or ""
         if cat:
             highlight_texts.append(cat.replace("_", " ").title())
-    highlights = ", ".join(highlight_texts[:5])
-
+    highlights_str = ", ".join(highlight_texts[:5])
     return {
         "education": education,
         "prev_companies": prev_companies,
         "linkedin": linkedin,
         "headline": headline,
-        "highlights": highlights,
+        "highlights": highlights_str,
     }
 
 # ---------- Harmonic API ----------
 
 def search_companies(page_size=200, start=0):
+    """Search for fintech/crypto companies on Harmonic."""
     r = requests.post(f"{HARMONIC_BASE}/search/companies", headers=HARMONIC_HEADERS, json={
         "query": {
             "filter_group": {
                 "join_operator": "and",
                 "filters": [
-                    {"field": "company_funding_stage", "comparator": "anyOf", "filter_value": ["PRE_SEED", "SEED", "SERIES_A"]},
-                    {"field": "company_and_employee_highlight_count", "comparator": "greaterThanOrEquals", "filter_value": 2},
-                    {"field": "company_headcount_real_change_180d_ago", "comparator": "greaterThanOrEquals", "filter_value": 1},
-                    {"field": "company_country", "comparator": "anyOf", "filter_value": ["United States"]},
+                    {"field": "company_funding_stage", "comparator": "anyOf",
+                     "filter_value": ["PRE_SEED", "SEED", "SERIES_A", "SERIES_B"]},
+                    {"field": "company_country", "comparator": "anyOf",
+                     "filter_value": ["United States"]},
+                    {"field": "company_and_employee_highlight_count", "comparator": "greaterThanOrEquals",
+                     "filter_value": 1},
                 ],
             },
             "pagination": {"page_size": page_size, "start": start}
@@ -360,48 +275,34 @@ def search_companies(page_size=200, start=0):
 
 def batch_get_companies(urns):
     out = []
-    total = len(urns)
-    for i, chunk in enumerate(chunked(urns, 50)):
+    for chunk in chunked(urns, 25):
         for attempt in range(3):
             try:
-                r = requests.post(f"{HARMONIC_BASE}/companies/batchGet", headers=HARMONIC_HEADERS, json={"urns": chunk}, timeout=180)
+                r = requests.post(f"{HARMONIC_BASE}/companies/batchGet", headers=HARMONIC_HEADERS, json={"urns": chunk}, timeout=120)
                 r.raise_for_status()
                 data = r.json()
                 out.extend(data if isinstance(data, list) else data.get("results", []))
                 break
-            except (requests.exceptions.Timeout, requests.exceptions.ConnectionError, requests.exceptions.HTTPError, requests.exceptions.ChunkedEncodingError) as e:
+            except (requests.exceptions.Timeout, requests.exceptions.ConnectionError, requests.exceptions.HTTPError) as e:
                 if attempt < 2:
-                    print(f"    Retry {attempt+1} for batch ({type(e).__name__})...")
-                    time.sleep(3)
+                    print(f"    Retry {attempt+1} for batch...")
+                    time.sleep(2)
                 else:
-                    print(f"    Skipping batch after 3 failures: {e}")
-        print(f"  {min((i+1)*50, total)}/{total} companies fetched", flush=True)
+                    raise
         time.sleep(0.3)
     return out
 
 def batch_get_persons(urns):
     out = {}
-    total = len(urns)
-    for i, chunk in enumerate(chunked(urns, 20)):
-        for attempt in range(3):
-            try:
-                r = requests.post(f"{HARMONIC_BASE}/persons/batchGet", headers=HARMONIC_HEADERS, json={"urns": chunk}, timeout=180)
-                r.raise_for_status()
-                data = r.json()
-                people = data if isinstance(data, list) else data.get("results", [])
-                for p in people:
-                    urn = p.get("entity_urn") or p.get("person_urn")
-                    if urn:
-                        out[urn] = p
-                break
-            except (requests.exceptions.Timeout, requests.exceptions.ConnectionError, requests.exceptions.HTTPError, requests.exceptions.ChunkedEncodingError) as e:
-                if attempt < 2:
-                    print(f"    Retry {attempt+1} for person batch ({type(e).__name__})...")
-                    time.sleep(3)
-                else:
-                    print(f"    Skipping person batch after 3 failures: {e}")
-        print(f"  {min((i+1)*20, total)}/{total} persons fetched", flush=True)
-        time.sleep(0.3)
+    for chunk in chunked(urns, 50):
+        r = requests.post(f"{HARMONIC_BASE}/persons/batchGet", headers=HARMONIC_HEADERS, json={"urns": chunk}, timeout=60)
+        r.raise_for_status()
+        data = r.json()
+        people = data if isinstance(data, list) else data.get("results", [])
+        for p in people:
+            urn = p.get("entity_urn") or p.get("person_urn")
+            if urn:
+                out[urn] = p
     return out
 
 # ---------- Affinity Check ----------
@@ -461,7 +362,6 @@ class AffinityClient:
 # ---------- Lemlist Dedup ----------
 
 def load_lemlist_contacted():
-    """Load all emails and company names from all Lemlist campaigns."""
     contacted_emails = set()
     contacted_companies = set()
     try:
@@ -519,23 +419,22 @@ def find_ceo_candidates(company):
 
 def main():
     print("=" * 60)
-    print("Find Top 100 US B2B SaaS Startups - Elite Founders")
+    print("Find Consumer Fintech - Stablecoin Yield Companies")
     print("=" * 60)
-    print("Filters: Pre-seed/Seed/Series A, US-only, B2B SaaS, founded 2023+, no healthcare")
-    print("Ranked by: Raise Score + Founder Background (ex-FAANG, elite schools, prior exits)")
-    print("Check size fit: $500K-$5M (Seed/Series A)")
-    print("Require: CEO name + email, zero prior Affinity contact")
+    print("Target: Consumer fintech offering yield through stablecoins")
+    print("Filters: US-based, Pre-seed to Series B, fintech/crypto tags")
+    print("Ranked by: Relevance Score + Founder Background")
     print()
 
     affinity = AffinityClient(AFFINITY_API_KEY)
 
-    # Step 0a: Load all previously contacted leads from Lemlist
-    print("[0a] Loading all contacted leads from Lemlist (all campaigns)...")
+    # Step 0a: Load Lemlist contacts
+    print("[0a] Loading contacted leads from Lemlist...")
     lemlist_emails, lemlist_companies = load_lemlist_contacted()
-    print(f"  {len(lemlist_emails)} unique emails, {len(lemlist_companies)} unique companies across all campaigns\n")
+    print(f"  {len(lemlist_emails)} emails, {len(lemlist_companies)} companies\n")
 
-    # Step 0b: Load existing companies from all sheets to exclude
-    print("[0b] Loading existing companies from all sheets...")
+    # Step 0b: Load existing from sheets
+    print("[0b] Loading existing companies from sheets...")
     spreadsheet = get_spreadsheet()
     existing_names = set()
     for ws in spreadsheet.worksheets():
@@ -551,11 +450,11 @@ def main():
             pass
     print(f"  Total: {len(existing_names)} existing companies to skip\n")
 
-    # Step 1: Search Harmonic (wider range to find fresh companies)
-    print("[1/5] Searching Harmonic for high-traction early-stage startups...")
+    # Step 1: Search Harmonic for fintech/crypto companies
+    print("[1/5] Searching Harmonic for fintech/crypto startups...")
     all_urns = []
     start = 0
-    while len(all_urns) < 2000:
+    while len(all_urns) < 8000:
         data = search_companies(page_size=200, start=start)
         urns = data.get("results", [])
         if not urns:
@@ -571,89 +470,46 @@ def main():
     companies = batch_get_companies(all_urns)
     print(f"  Got {len(companies)} records")
 
-    # Step 3: Filter and score
-    print("\n[3/5] Filtering and scoring...")
-    stats = {"not_us": 0, "industry": 0, "nonprofit": 0, "not_b2b": 0, "no_startup": 0, "too_much_funding": 0, "too_old": 0, "healthcare": 0, "duplicate": 0, "already_in_sheet1": 0}
+    # Step 3: Filter for stablecoin yield + consumer
+    print("\n[3/5] Filtering for stablecoin yield consumer fintech...")
     scored = []
     seen_names = set()
+    stats = {"duplicate": 0, "already_in_sheet": 0, "not_stablecoin_yield": 0}
 
     for c in companies:
         name = c.get("name") or ""
-        location = c.get("location") or {}
         tags = c.get("tags") or []
-        customer_type = c.get("customer_type") or ""
-        company_type = c.get("company_type") or ""
         description = c.get("description") or ""
 
-        # Dedup by normalized name
         norm = normalize_name(name)
         if norm in seen_names:
             stats["duplicate"] += 1
             continue
         seen_names.add(norm)
 
-        # Skip companies already in Sheet1
         if norm in existing_names:
-            stats["already_in_sheet1"] += 1
+            stats["already_in_sheet"] += 1
             continue
 
-        if not is_us_based(location):
-            stats["not_us"] += 1
-            continue
-        if is_excluded_industry(tags):
-            stats["industry"] += 1
-            continue
-        if is_nonprofit(name, company_type, tags, description):
-            stats["nonprofit"] += 1
-            continue
-        if is_healthcare(name, tags, description):
-            stats["healthcare"] += 1
-            continue
-        if not is_b2b_saas(tags, customer_type, description):
-            stats["not_b2b"] += 1
-            continue
-        if company_type and company_type.upper() not in ("STARTUP", ""):
-            stats["no_startup"] += 1
-            continue
-        # Require founded 2023 or later
-        fd = c.get("founding_date") or {}
-        fd_date = fd.get("date") or ""
-        found_year = None
-        if fd_date:
-            try:
-                found_year = int(fd_date[:4])
-            except (ValueError, IndexError):
-                pass
-        if not found_year or found_year < 2023:
-            stats["too_old"] += 1
-            continue
-        # Skip companies that have raised too much (> $10M = past our check size sweet spot)
-        funding = c.get("funding") or {}
-        funding_total = funding.get("funding_total") or 0
-        if funding_total > 10_000_000:
-            stats["too_much_funding"] += 1
+        if not matches_stablecoin_yield(tags, description, name):
+            stats["not_stablecoin_yield"] += 1
             continue
 
-        raise_score = compute_raise_score(c)
-        scored.append((raise_score, c))
+        relevance = compute_relevance_score(c)
+        scored.append((relevance, c))
 
-    # Sort by raise score (highest first)
     scored.sort(key=lambda x: -x[0])
 
-    print(f"  Excluded - not US: {stats['not_us']}, industry: {stats['industry']}, "
-          f"nonprofit: {stats['nonprofit']}, healthcare: {stats['healthcare']}, "
-          f"not B2B: {stats['not_b2b']}, duplicate: {stats['duplicate']}, "
-          f"already in sheets: {stats['already_in_sheet1']}, "
-          f"not startup: {stats['no_startup']}, founded before 2023: {stats['too_old']}, "
-          f"too much funding: {stats['too_much_funding']}")
-    print(f"  Remaining candidates: {len(scored)}")
-    print(f"  Top raise scores: {[s[0] for s in scored[:10]]}")
+    print(f"  Excluded - duplicate: {stats['duplicate']}, already in sheets: {stats['already_in_sheet']}, "
+          f"not stablecoin/yield: {stats['not_stablecoin_yield']}")
+    print(f"  Matching candidates: {len(scored)}")
+    if scored:
+        print(f"  Top relevance scores: {[(s[1].get('name',''), s[0]) for s in scored[:10]]}")
 
-    # Step 4: Get CEO info, score founders, check Affinity, collect top 50
-    print(f"\n[4/5] Getting CEO info, scoring founders, and checking Affinity...")
+    # Step 4: Get CEO info, score founders, check Affinity
+    print(f"\n[4/5] Getting CEO info and checking Affinity...")
 
-    # First pass: get all person URNs for top candidates
-    top_candidates = scored[:500]  # Check top 500 to find 50 with elite founders
+    top_candidates = scored[:300]
     all_person_urns = []
     company_candidates = {}
     for _, c in top_candidates:
@@ -667,29 +523,24 @@ def main():
     print(f"  Fetching {len(all_person_urns)} person records...")
     people_by_urn = batch_get_persons(all_person_urns) if all_person_urns else {}
 
-    # Second pass: find CEO+email and score founders
     pre_affinity = []
     skipped_no_ceo = 0
     seen_final_names = set()
 
-    for raise_score, c in top_candidates:
+    for relevance_score, c in top_candidates:
         urn = c.get("entity_urn") or ""
         name = c.get("name") or ""
-
-        # Dedup again at this stage
         norm = normalize_name(name)
         if norm in seen_final_names:
             continue
         seen_final_names.add(norm)
 
         candidates = company_candidates.get(urn, [])
-
-        # Find CEO with email
         ceo_name = ""
         first_name = ""
         email = ""
-
         chosen_person = None
+
         for cand in candidates:
             person_data = people_by_urn.get(cand["urn"], {})
             contact = person_data.get("contact") or {}
@@ -699,7 +550,6 @@ def main():
                 if emails:
                     p_email = (emails[0] if isinstance(emails[0], str) else "").strip()
             p_name = person_data.get("full_name") or person_data.get("name") or ""
-
             if p_email and p_name:
                 ceo_name = p_name
                 first_name = p_name.split()[0] if p_name else ""
@@ -718,7 +568,7 @@ def main():
             domain = url.replace("https://", "").replace("http://", "").replace("www.", "").split("/")[0] if url else ""
 
         founder_score = compute_founder_score(chosen_person)
-        combined_score = raise_score + founder_score
+        combined_score = relevance_score + founder_score
 
         pre_affinity.append({
             "company": c,
@@ -726,19 +576,19 @@ def main():
             "first_name": first_name,
             "email": email,
             "domain": domain,
-            "raise_score": raise_score,
+            "relevance_score": relevance_score,
             "founder_score": founder_score,
             "combined_score": combined_score,
             "person": chosen_person,
         })
 
-    # Sort by combined score (raise + founder background)
     pre_affinity.sort(key=lambda x: -x["combined_score"])
     print(f"  {len(pre_affinity)} candidates with CEO+email (skipped {skipped_no_ceo} without)")
-    print(f"  Top combined scores: {[(p['company'].get('name',''), p['combined_score'], p['founder_score']) for p in pre_affinity[:10]]}")
+    if pre_affinity:
+        print(f"  Top: {[(p['company'].get('name',''), p['combined_score'], p['relevance_score']) for p in pre_affinity[:10]]}")
 
-    # Third pass: check Affinity for top candidates, collect 50
-    print(f"\n  Checking Affinity (need 100)...")
+    # Check Affinity - collect up to 50
+    print(f"\n  Checking Affinity (need up to 50)...")
     final = []
     skipped_affinity = 0
 
@@ -750,18 +600,17 @@ def main():
         name = c.get("name") or ""
         domain = item["domain"]
 
-        print(f"  [{len(final)+1}] {name} (combined={item['combined_score']:.0f}, raise={item['raise_score']:.0f}, founder={item['founder_score']:.0f})...", end=" ", flush=True)
+        print(f"  [{len(final)+1}] {name} (combined={item['combined_score']:.0f}, rel={item['relevance_score']:.0f}, founder={item['founder_score']:.0f})...", end=" ", flush=True)
 
-        # Check Lemlist first (faster than Affinity API)
         lead_email = item["email"].strip().lower()
         lead_company_norm = normalize_name(name)
         if lead_email in lemlist_emails:
             skipped_affinity += 1
-            print(f"SKIP (email already in Lemlist)")
+            print(f"SKIP (email in Lemlist)")
             continue
         if lead_company_norm in lemlist_companies:
             skipped_affinity += 1
-            print(f"SKIP (company already in Lemlist)")
+            print(f"SKIP (company in Lemlist)")
             continue
 
         org = affinity.search_org(name, domain)
@@ -781,12 +630,11 @@ def main():
         final.append(item)
         time.sleep(0.15)
 
-    print(f"\n  Skipped (already in Affinity): {skipped_affinity}")
+    print(f"\n  Skipped (already contacted): {skipped_affinity}")
     print(f"  Final list: {len(final)}")
 
-    # Step 5: Write to next available sheet
+    # Step 5: Write to sheet
     existing_sheets = [ws.title for ws in spreadsheet.worksheets()]
-    # Find next sheet number
     sheet_num = 3
     while f"Sheet{sheet_num}" in existing_sheets:
         sheet_num += 1
@@ -800,11 +648,9 @@ def main():
 
     headers = [
         "companyName", "firstName", "email", "ceoName", "domain",
-        "Combined Score", "Raise Score", "Founder Score",
+        "Combined Score", "Relevance Score", "Founder Score",
         "Stage", "Funding Total", "Headcount",
-        "Headcount Growth (6mo)", "Web Traffic", "Web Traffic Growth (6mo)",
-        "LinkedIn Followers", "LinkedIn Growth (6mo)",
-        "Country", "City", "Customer Type",
+        "Customer Type",
         "Founder LinkedIn", "Founder Headline",
         "Founder Education", "Founder Previous Companies",
         "Founder Highlights",
@@ -821,30 +667,11 @@ def main():
         location = c.get("location") or {}
         tags = c.get("tags") or []
         highlights = c.get("highlights") or []
-        tm = c.get("traction_metrics") or {}
         fd = c.get("founding_date") or {}
-
-        hc = tm.get("corrected_headcount") or {}
-        hc_180 = hc.get("180d_ago", {})
-        wt = tm.get("web_traffic") or {}
-        wt_180 = wt.get("180d_ago", {})
-        li = tm.get("linkedin_follower_count") or {}
-        li_180 = li.get("180d_ago", {})
 
         headcount = c.get("headcount") or c.get("corrected_headcount") or ""
         if isinstance(headcount, dict):
             headcount = headcount.get("latest_metric_value") or ""
-
-        hc_change = hc_180.get("change")
-        hc_growth = f"+{hc_change:.0f}" if hc_change and hc_change > 0 else str(hc_change or 0)
-
-        wt_val = wt.get("latest_metric_value") or c.get("web_traffic") or ""
-        wt_pct = wt_180.get("percent_change")
-        wt_growth = f"{wt_pct:+.0f}%" if wt_pct else ""
-
-        li_val = li.get("latest_metric_value") or ""
-        li_pct = li_180.get("percent_change")
-        li_growth = f"{li_pct:+.0f}%" if li_pct else ""
 
         founded = ""
         fd_date_str = fd.get("date") or ""
@@ -856,7 +683,6 @@ def main():
 
         bg = extract_founder_background(item.get("person"))
 
-        # Clean company name (remove emojis, YC tags, Inc., etc.)
         clean_name = c.get("name", "")
         clean_name = re.sub(r'\s*\([^)]*\)\s*', ' ', clean_name).strip()
         clean_name = clean_name.encode('ascii', 'ignore').decode('ascii').strip()
@@ -870,18 +696,11 @@ def main():
             item["ceo_name"],
             item["domain"],
             f"{item['combined_score']:.0f}",
-            f"{item['raise_score']:.0f}",
+            f"{item['relevance_score']:.0f}",
             f"{item['founder_score']:.0f}",
             c.get("stage", ""),
             f"${funding_total:,.0f}" if funding_total else "No funding",
             str(headcount),
-            hc_growth,
-            str(wt_val),
-            wt_growth,
-            str(li_val),
-            li_growth,
-            location.get("country", ""),
-            location.get("city", ""),
             c.get("customer_type", ""),
             bg["linkedin"],
             bg["headline"][:200] if bg["headline"] else "",
@@ -891,18 +710,15 @@ def main():
             ", ".join([t.get("display_value", "") for t in tags[:5]]),
             ", ".join([h.get("category", "") for h in highlights[:5]]),
             founded,
-            (c.get("description") or "")[:200],
+            (c.get("description") or "")[:300],
         ])
 
     target_sheet.update(range_name='A1', values=output_rows)
 
     print(f"\n{'=' * 60}")
-    print(f"DONE! {len(final)} elite-founder US B2B SaaS startups written to {target_sheet_name}")
-    print(f"  All US-based, B2B SaaS, no healthcare, <$10M raised, founded 2023+")
-    print(f"  All have CEO name + email")
-    print(f"  Zero prior Affinity contact or Lemlist outreach")
-    print(f"  Ranked by Combined Score = Raise Score + Founder Background")
-    print(f"  (ex-FAANG, elite schools, prior exits, senior roles)")
+    print(f"DONE! {len(final)} consumer fintech stablecoin yield companies")
+    print(f"  All have CEO name + email, zero prior contact")
+    print(f"  Ranked by Relevance + Founder Background")
     print(f"\nSpreadsheet: https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}")
     print(f"{'=' * 60}")
 

@@ -19,7 +19,7 @@ def get_sheet():
     scopes = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
     creds = Credentials.from_service_account_file('credentials.json', scopes=scopes)
     gc = gspread.authorize(creds)
-    return gc.open_by_key(SPREADSHEET_ID).sheet1
+    return gc.open_by_key(SPREADSHEET_ID).worksheet("Sheet7")
 
 # ---------- Lemlist API ----------
 
