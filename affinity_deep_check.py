@@ -1,3 +1,4 @@
+
 import os, requests, time, json, re
 import gspread
 from google.oauth2.service_account import Credentials
@@ -33,7 +34,7 @@ def normalize_name(name):
 scopes = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
 creds = Credentials.from_service_account_file('credentials.json', scopes=scopes)
 gc = gspread.authorize(creds)
-sheet = gc.open_by_key(SPREADSHEET_ID).worksheet("Sheet7")
+sheet = gc.open_by_key(SPREADSHEET_ID).sheet1
 rows = sheet.get_all_values()
 
 companies = []

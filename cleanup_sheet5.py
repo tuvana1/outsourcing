@@ -22,7 +22,7 @@ REMOVE_COMPANIES = [
 ]
 
 def main():
-    gc = gspread.service_account(filename="/Users/erdenetangads/palm drive capital/credentials.json")
+    gc = gspread.service_account(filename="credentials.json")
     sh = gc.open_by_key("1sdbE6V-qVNuKo9LKe42i8x9Nj6ENX8N5oeZsSjRwT9o")
     ws = sh.worksheet("Sheet5")
 

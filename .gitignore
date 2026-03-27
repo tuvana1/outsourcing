@@ -1,6 +1,9 @@
 credentials.json
 .env
-lemlist_leads.csv
-debug_ceos.py
+*.csv
 *.json
 !package.json
+__pycache__/
+*.pyc
+venv/
+debug_ceos.py

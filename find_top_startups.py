@@ -423,23 +423,34 @@ class AffinityClient:
             return None
         return r.json()
 
-    def search_org(self, name, domain=None):
+    def search_all_orgs(self, name, domain=None):
+        """Search by domain AND name, return ALL matching orgs to check."""
+        matches = []
+        seen_ids = set()
+        norm = normalize_name(name)
+
         if domain:
-            data = self._get("/organizations", {"term": domain, "page_size": 5})
+            data = self._get("/organizations", {"term": domain, "page_size": 10})
             if data:
                 orgs = data.get("organizations", []) if isinstance(data, dict) else data
                 for org in (orgs or []):
-                    if (org.get("domain") or "").lower().strip() == domain.lower():
-                        return org
+                    org_domain = (org.get("domain") or "").lower().strip()
+                    org_norm = normalize_name(org.get("name") or "")
+                    if org_domain == domain.lower() or org_norm == norm:
+                        if org.get("id") not in seen_ids:
+                            matches.append(org)
+                            seen_ids.add(org.get("id"))
+
         if name:
-            data = self._get("/organizations", {"term": name, "page_size": 5})
+            data = self._get("/organizations", {"term": name, "page_size": 10})
             if data:
                 orgs = data.get("organizations", []) if isinstance(data, dict) else data
-                norm = normalize_name(name)
                 for org in (orgs or []):
-                    if normalize_name(org.get("name") or "") == norm:
-                        return org
-        return None
+                    if normalize_name(org.get("name") or "") == norm and org.get("id") not in seen_ids:
+                        matches.append(org)
+                        seen_ids.add(org.get("id"))
+
+        return matches
 
     def has_any_interaction(self, org_id):
         org_detail = self._get(f"/organizations/{org_id}")
@@ -764,17 +775,21 @@ def main():
             print(f"SKIP (company already in Lemlist)")
             continue
 
-        org = affinity.search_org(name, domain)
-        if org:
-            org_id = org.get("id")
-            has_interaction, reason = affinity.has_any_interaction(org_id)
-            if has_interaction:
-                skipped_affinity += 1
-                print(f"SKIP ({reason})")
+        matching_orgs = affinity.search_all_orgs(name, domain)
+        if matching_orgs:
+            skip = False
+            for org in matching_orgs:
+                org_id = org.get("id")
+                has_interaction, reason = affinity.has_any_interaction(org_id)
+                if has_interaction:
+                    skipped_affinity += 1
+                    print(f"SKIP ({reason})")
+                    skip = True
+                    break
                 time.sleep(0.15)
+            if skip:
                 continue
-            else:
-                print("OK")
+            print("OK")
         else:
             print("OK (new)")
 

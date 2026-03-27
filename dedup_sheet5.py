@@ -9,7 +9,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 from dotenv import load_dotenv
 
-load_dotenv("/Users/erdenetangads/palm drive capital/.env")
+load_dotenv()
 
 AFFINITY_API_KEY = os.environ["AFFINITY_API_KEY"]
 LEMLIST_API_KEY = os.environ["LEMLIST_API_KEY"]
@@ -25,7 +25,7 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive",
 ]
 creds = Credentials.from_service_account_file(
-    "/Users/erdenetangads/palm drive capital/credentials.json", scopes=SCOPES
+    "credentials.json", scopes=SCOPES
 )
 gc = gspread.authorize(creds)
 sh = gc.open_by_key(SPREADSHEET_ID)
